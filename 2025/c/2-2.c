@@ -36,12 +36,12 @@ int main(int argv, char* argc[])
             size_t id_len = snprintf(id_str, ARRAY_LENGTH(id_str), "%"PRIu64, id);
 
             // process number for each integer number of groups (e.g. for 1234567890 - group count will be 2,5, and 10)
-            for (uint64_t num_groups = 2; num_groups <= id_len; ++num_groups) {
+            for (size_t num_groups = 2; num_groups <= id_len; ++num_groups) {
                 // only if divides without remainder
                 if (id_len % num_groups != 0) {
                     continue;
                 }
-                uint64_t group_chunk_len = id_len / num_groups;
+                size_t group_chunk_len = id_len / num_groups;
                 // compare groups in pairs, from first to last-1
                 // if all pairs is equal, then ID is fake
                 bool all_groups_equal = true;
