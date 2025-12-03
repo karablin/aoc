@@ -36,7 +36,6 @@ int main(int argv, char* argc[])
             size_t id_len = snprintf(id_str, ARRAY_LENGTH(id_str), "%"PRIu64, id);
 
             // process number for each integer number of groups (e.g. for 1234567890 - group count will be 2,5, and 10)
-            bool found_fake_id = false; 
             for (uint64_t num_groups = 2; num_groups <= id_len; ++num_groups) {
                 // only if divides without remainder
                 if (id_len % num_groups != 0) {
@@ -54,13 +53,10 @@ int main(int argv, char* argc[])
                     }
                 }
                 if (all_groups_equal) {
-                    found_fake_id = true;
+                    answer += id;
+                    printf("%" PRIu64 "\n", id);
                     break;
                 }
-            }
-            if (found_fake_id) {
-                answer += id;
-                printf("%" PRIu64 "\n", id);                
             }
         }
     }
