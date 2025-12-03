@@ -41,15 +41,8 @@ int main(int argv, char* argc[])
             }
 
             // compare left and right parts of the number
-            bool equal = true;
-            for(size_t left_idx = 0, right_idx = id_len / 2; left_idx < id_len / 2; ++left_idx, ++right_idx) {
-                if (id_str[left_idx] != id_str[right_idx]) {
-                    equal = false;
-                    break;
-                }
-            }
-            if (equal) {
-                answer += id;
+            if (strncmp(&id_str[0], &id_str[id_len / 2], id_len / 2) == 0) {
+                answer += id;   
                 printf("%" PRIu64 "\n", id);
             }
         }
