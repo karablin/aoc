@@ -36,28 +36,27 @@ int main(int argv, char* argc[])
             size_t id_len = snprintf(id_str, ARRAY_LENGTH(id_str), "%"PRIu64, id);
 
             // process number for each integer number of groups (e.g. for 1234567890 - group count will be 2,5, and 10)
-            uint64_t num_groups = 2;
             bool found_fake_id = false; 
-            while (num_groups <= id_len) {
+            for (uint64_t num_groups = 2; num_groups <= id_len; ++num_groups) {
                 // only if divides without remainder
-                if (id_len % num_groups == 0) {
-                    uint64_t group_chunk_len = id_len / num_groups;
-                    // compare groups in pairs, from first to last-1
-                    // if all pairs is equal, then ID is fake
-                    bool all_groups_equal = true;
-                    for (size_t group_idx = 0; group_idx < (num_groups-1)*group_chunk_len; group_idx += group_chunk_len) {
-                        // compare strings of two groups
-                        if (strncmp(&id_str[group_idx], &id_str[group_idx + group_chunk_len], group_chunk_len) != 0) {
-                            all_groups_equal = false;
-                            break;
-                        }
-                    }
-                    if (all_groups_equal) {
-                        found_fake_id = true;
+                if (id_len % num_groups != 0) {
+                    continue;
+                }
+                uint64_t group_chunk_len = id_len / num_groups;
+                // compare groups in pairs, from first to last-1
+                // if all pairs is equal, then ID is fake
+                bool all_groups_equal = true;
+                for (size_t group_idx = 0; group_idx < (num_groups-1)*group_chunk_len; group_idx += group_chunk_len) {
+                    // compare strings of two groups
+                    if (strncmp(&id_str[group_idx], &id_str[group_idx + group_chunk_len], group_chunk_len) != 0) {
+                        all_groups_equal = false;
                         break;
                     }
                 }
-                ++num_groups;
+                if (all_groups_equal) {
+                    found_fake_id = true;
+                    break;
+                }
             }
             if (found_fake_id) {
                 answer += id;
