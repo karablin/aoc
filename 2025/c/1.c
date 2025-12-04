@@ -18,7 +18,7 @@ int main(int argv, char* argc[])
     }
 
     char cmd_buf[10];
-    int answer = 0;
+    int answer1 = 0, answer2 = 0;
     int x = 50;
 
     while (fgets(cmd_buf, ARRAY_LENGTH(cmd_buf), f)) {
@@ -33,8 +33,10 @@ int main(int argv, char* argc[])
 
         // calculate new x (can be negative, but thats ok, only need to check for both -100 and +100 bounds later)
         x = (x + delta) % 100; 
+        // first part of puzzle
+        answer1 += (x == 0);
         // each full circle passes through 0
-        answer += full_circles;
+        answer2 += full_circles;
         // check if non-full circle remainder passed through 0/+100/-100
         bool passed_through_zero =
             (old_x + remainder >= 100) ||
@@ -43,11 +45,13 @@ int main(int argv, char* argc[])
             (old_x > 0 && old_x + remainder <= 0);
 
         if (passed_through_zero) {
-            answer++;
+            answer2++;
         }
+
     }
     
-    printf("answer: %d\n", answer);
+    printf("answer1: %d\n", answer1);
+    printf("answer2: %d\n", answer2);
     fclose(f);
     return 0;
 }
