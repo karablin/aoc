@@ -69,7 +69,7 @@ int main(int argv, char* argc[])
         // print_map(&map);
         // remove 'x' rolls from map
         for(int pos = 0; pos < map.height * map.width; ++pos) {
-            if (*(map.data + pos) == 'x') *(map.data + pos) = '.';
+            if (map.data[pos] == 'x') map.data[pos] = '.';
         }
     } while (rolls_found);
 
@@ -92,20 +92,18 @@ void load_map(RollsMap *map, FILE* f)
     
     fread(map->data, 1, file_size, f);
     // remove newline, spaces, etc from data, and calculate width and height
-    size_t calc_width = 0;
-    size_t real_data_size = 0;
-    char *dst = map->data;
-    for (char *src = map->data; src < (map->data + file_size); ++src) {
-        if (!map->width && isspace(*src)) {
+    unsigned short calc_width = 0;
+    int dst = 0;
+    for (int src = 0; src < file_size; ++src) {
+        if (!map->width && isspace(map->data[src])) {
             map->width = calc_width;
         } 
         ++calc_width;
-        if (!isspace(*src)) {
-            *dst++ = *src;
-            ++real_data_size;
+        if (!isspace(map->data[src])) {
+            map->data[dst++] = map->data[src];
         }
     }
-    map->height = (dst - map->data) / map->width;
+    map->height = dst / map->width;
 }
 
 void print_map(RollsMap *map) {
