@@ -1,5 +1,5 @@
 #!/bin/bash
-GCC_FLAGS="-Wall -Wextra -fsanitize=address,undefined"
+GCC_FLAGS="-g -Wall -Wextra -fsanitize=address,undefined"
 
 rm -f ./build/*c
 for file in *.c; do
