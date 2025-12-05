@@ -19,7 +19,7 @@ int main(int argv, char* argc[])
     }
 
     char buf[64];        // reasonable buffer, to avoid dynamic allocation and related complexity
-    uint64_t answer = 0; // answer doesn't fit into 32-bit integers, using 64-bit
+    uint64_t answer1 = 0, answer2 = 0;
     
     // process ranges one by one
     while(read_until(',', buf, ARRAY_LENGTH(buf), f)) {
@@ -35,7 +35,13 @@ int main(int argv, char* argc[])
             char id_str[32];
             size_t id_len = snprintf(id_str, ARRAY_LENGTH(id_str), "%"PRIu64, id);
 
-            // process number for each integer number of groups (e.g. for 1234567890 - group count will be 2,5, and 10)
+            // part 1:
+            if (id_len % 2 == 0 && strncmp(&id_str[0], &id_str[id_len / 2], id_len / 2) == 0) {
+                answer1 += id;   
+                // printf("%" PRIu64 "\n", id);
+            }
+
+            // part 2: process number for each integer number of groups (e.g. for 1234567890 - group count will be 2,5, and 10)
             for (size_t num_groups = 2; num_groups <= id_len; ++num_groups) {
                 // only if divides without remainder
                 if (id_len % num_groups != 0) {
@@ -53,15 +59,16 @@ int main(int argv, char* argc[])
                     }
                 }
                 if (all_groups_equal) {
-                    answer += id;
-                    printf("%" PRIu64 "\n", id);
+                    answer2 += id;
+                    // printf("%" PRIu64 "\n", id);
                     break;
                 }
             }
         }
     }
 
-    printf("answer: %" PRIu64 "\n", answer);
+    printf("answer1: %" PRIu64 "\n", answer1);
+    printf("answer2: %" PRIu64 "\n", answer2);
     fclose(f);
     return 0;
 }
