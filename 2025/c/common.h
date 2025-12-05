@@ -5,6 +5,37 @@
 
 #define ARRAY_LENGTH(array) (sizeof((array))/sizeof((array)[0]))
 
+// dynamic arrays
+#define DARRAY_DEFINE_TYPE(type_name, elem_type)\
+    typedef struct {\
+        size_t length;\
+        size_t capacity;\
+        elem_type *data;\
+    } type_name;
+
+#define DARRAY_PUSH(array, value)\
+    do {\
+        if (array.length >= array.capacity) {\
+            if (array.capacity) {\
+                array.capacity *= 2;\
+            } else {\
+                array.capacity = 64;\
+            }\
+            array.data = realloc(array.data, array.capacity*sizeof(array.data[0]));\
+        }\
+        array.data[array.length++] = value;\
+    } while(0)
+
+#define DARRAY_REMOVE(array, idx)\
+    do {\
+        if (idx < array.length) {\
+            if (idx != array.length - 1) {\
+                memmove(&array.data[idx], &array.data[idx+1], sizeof(array.data[0]) * (array.length - idx - 1));\
+            }\
+            --array.length;\
+        }\
+    } while(0)
+
 /*
     read from file stream into the array, up to max_count-1,
     until EOF or compare_char found. compare_char is skipped 
