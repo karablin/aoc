@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdbool.h>
 #include "common.h"
 
@@ -32,7 +31,7 @@ int main(int argv, char* argc[])
         int remainder = delta % 100;
 
         // calculate new x (can be negative, but thats ok, only need to check for both -100 and +100 bounds later)
-        x = (x + delta) % 100; 
+        x = (x + delta) % 100;
         // first part of puzzle
         answer1 += (x == 0);
         // each full circle passes through 0
@@ -49,7 +48,7 @@ int main(int argv, char* argc[])
         }
 
     }
-    
+
     printf("answer1: %d\n", answer1);
     printf("answer2: %d\n", answer2);
     fclose(f);

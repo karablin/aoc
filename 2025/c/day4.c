@@ -4,8 +4,6 @@
 #include <stdbool.h>
 #include <ctype.h>
 
-#include "common.h"
-
 typedef struct {
     unsigned short width;
     unsigned short height;
@@ -50,7 +48,7 @@ int main(int argv, char* argc[])
                 if (!is_roll(&map, row, col)) {
                     continue;
                 }
-                int rolls_cnt = 
+                int rolls_cnt =
                     is_roll(&map, row - 1, col - 1) + is_roll(&map, row - 1, col) + is_roll(&map, row - 1, col + 1) +
                     is_roll(&map, row    , col - 1) +               0             + is_roll(&map, row    , col + 1) +
                     is_roll(&map, row + 1, col - 1) + is_roll(&map, row + 1, col) + is_roll(&map, row + 1, col + 1);
@@ -87,9 +85,9 @@ void load_map(RollsMap *map, FILE* f)
     fseek(f, 0, SEEK_END);
     long file_size = ftell(f);
     rewind(f);
-    // allocate large enough buffer 
-    map->data = malloc(file_size); 
-    
+    // allocate large enough buffer
+    map->data = malloc(file_size);
+
     fread(map->data, 1, file_size, f);
     // remove newline, spaces, etc from data, and calculate width and height
     unsigned short calc_width = 0;
@@ -97,7 +95,7 @@ void load_map(RollsMap *map, FILE* f)
     for (int src = 0; src < file_size; ++src) {
         if (!map->width && isspace(map->data[src])) {
             map->width = calc_width;
-        } 
+        }
         ++calc_width;
         if (!isspace(map->data[src])) {
             map->data[dst++] = map->data[src];

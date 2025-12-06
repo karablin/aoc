@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-#include <ctype.h>
 #include <stdint.h>
 #include <inttypes.h>
 
@@ -32,7 +31,7 @@ int main(int argv, char* argc[])
     Ranges ranges = {0};
     IDs ids = {0};
 
-    char tmp_str[128]; 
+    char tmp_str[128];
     // load ranges till empty line
     while (fgets(tmp_str, ARRAY_LENGTH(tmp_str), f)) {
         uint64_t min, max;
@@ -51,7 +50,7 @@ int main(int argv, char* argc[])
         DARRAY_PUSH(ids, id);
     }
 
-    // merge ranges inplace, naively. second option can be sort and merge in one pass, 
+    // merge ranges inplace, naively. second option can be sort and merge in one pass,
     // but this is shorter and i'm not sure that sort version will be faster on small dataset
     for(bool merged = true; merged;) {
         merged = false;
