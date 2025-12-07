@@ -18,24 +18,24 @@
 
 #define DARRAY_PUSH(array, value)\
     do {\
-        if (array.length >= array.capacity) {\
-            if (array.capacity) {\
-                array.capacity *= 2;\
+        if ((array).length >= (array).capacity) {\
+            if ((array).capacity) {\
+                (array).capacity *= 2;\
             } else {\
-                array.capacity = 64;\
+                (array).capacity = 64;\
             }\
-            array.data = realloc(array.data, array.capacity*sizeof(array.data[0]));\
+            (array).data = realloc((array).data, (array).capacity*sizeof((array).data[0]));\
         }\
-        array.data[array.length++] = value;\
+        (array).data[(array).length++] = value;\
     } while(0)
 
 #define DARRAY_REMOVE(array, idx)\
     do {\
-        if (idx < array.length) {\
-            if (idx != array.length - 1) {\
-                memmove(&array.data[idx], &array.data[idx+1], sizeof(array.data[0]) * (array.length - idx - 1));\
+        if (idx < (array).length) {\
+            if (idx != (array).length - 1) {\
+                memmove(&(array).data[idx], &(array).data[idx+1], sizeof((array).data[0]) * ((array).length - idx - 1));\
             }\
-            --array.length;\
+            --(array).length;\
         }\
     } while(0)
 
