@@ -7,8 +7,8 @@ cd ./2025/c/
 
 ./build.sh
 
-./build/1c ../input/<day1input>.txt # day 1. day1input - is YOUR input file
-./build/2c ../input/<day2input>.txt # day 2
+./build/day1 ../input/<day1input>.txt # day 1. day1input - is YOUR input file
+./build/day2 ../input/<day2input>.txt # day 2
 etc...
 ```
 
