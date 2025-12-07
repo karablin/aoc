@@ -10,7 +10,6 @@
 
 DARRAY_DEFINE_TYPE(UInt64Array, uint64_t);
 DARRAY_DEFINE_TYPE(String, char);
-DARRAY_DEFINE_TYPE(NumberLines, UInt64Array);
 DARRAY_DEFINE_TYPE(StringLines, String);
 
 int main(int argv, char* argc[])
@@ -63,7 +62,7 @@ int main(int argv, char* argc[])
     UInt64Array tsk2_numbers = {0};
 
     for (size_t col = 0; col <= max_len; ++col) {
-        // all spaces means data for operation received
+        // all spaces means all data for operation received
         bool all_spaces = true;
 
         uint64_t tsk2_curr_number = 0;
