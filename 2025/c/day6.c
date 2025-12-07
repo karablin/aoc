@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <ctype.h>
 
 #include "common.h"
 
@@ -11,9 +12,6 @@ DARRAY_DEFINE_TYPE(UInt64Array, uint64_t);
 DARRAY_DEFINE_TYPE(String, char);
 DARRAY_DEFINE_TYPE(NumberLines, UInt64Array);
 DARRAY_DEFINE_TYPE(StringLines, String);
-
-// A1 4387670995909
-// A2 9625320374409
 
 int main(int argv, char* argc[])
 {
@@ -56,63 +54,59 @@ int main(int argv, char* argc[])
     uint64_t answer2 = 0;
 
     char current_operator;
-    StringLines tsk1_numbers = {0};
-    UInt64Array tsk2_numbers = {0};
 
+    UInt64Array tsk1_numbers = {0};
     for (size_t line_idx = 0; line_idx < file_lines.length - 1; ++line_idx) {
-        DARRAY_PUSH(tsk1_numbers, (String){0});
+        DARRAY_PUSH(tsk1_numbers, 0);
     }
+
+    UInt64Array tsk2_numbers = {0};
 
     for (size_t col = 0; col <= max_len; ++col) {
         // all spaces means data for operation received
         bool all_spaces = true;
-        String tsk2_number = {0};
+
+        uint64_t tsk2_curr_number = 0;
+
         for (size_t line_idx = 0; line_idx < file_lines.length; ++line_idx) {
             char c = file_lines.data[line_idx].data[col];
-            // operator position
-            if (line_idx == (file_lines.length - 1)) {
-                current_operator = c != ' ' ? c : current_operator;
+            
+            if (line_idx != (file_lines.length - 1)) {
+                // digits line
+                if (isdigit(c)) {
+                    tsk1_numbers.data[line_idx] = tsk1_numbers.data[line_idx] * 10 + (c - '0');
+                    tsk2_curr_number = tsk2_curr_number * 10 + (c - '0');
+                }
             } else {
-                DARRAY_PUSH(tsk1_numbers.data[line_idx], c);
-                DARRAY_PUSH(tsk2_number, c);
-            }
-            // check if all data received for current operator (column is full of spaces)
+                // operators line
+                current_operator = c != ' ' ? c : current_operator;
+            } 
+            // check, if column consists only of spaces
             if (c != ' ') {
                 all_spaces = false;
             }
         }
-        if (all_spaces) {
+        if (!all_spaces) {
+            DARRAY_PUSH(tsk2_numbers, tsk2_curr_number);
+        } else {
             // time to do math
             uint64_t result;
-
             // task 1
-            DARRAY_PUSH(tsk1_numbers.data[0], '\0'); // for sscanf
-            sscanf(tsk1_numbers.data[0].data, "%"SCNu64, &result);
-            tsk1_numbers.data[0].length = 0;
-
+            result = tsk1_numbers.data[0];
             for (size_t i = 1; i< tsk1_numbers.length; ++i) {
-                DARRAY_PUSH(tsk1_numbers.data[i], '\0'); // for sscanf
-                uint64_t tmp;
-                sscanf(tsk1_numbers.data[i].data, "%"SCNu64, &tmp);
-                tsk1_numbers.data[i].length = 0;
-                result = current_operator == '+' ? result + tmp : result * tmp;
+                result = current_operator == '+' ? result + tsk1_numbers.data[i] : result * tsk1_numbers.data[i];
             }
             answer1 += result;
-
             // task 2
             result = tsk2_numbers.data[0];
             for (size_t i = 1; i < tsk2_numbers.length; ++i) {
                 result = current_operator == '+' ? result + tsk2_numbers.data[i] : result * tsk2_numbers.data[i];
             }
             answer2 += result;
-            tsk2_numbers.length = 0; // reset for the next iteration
-        } else {
-            DARRAY_PUSH(tsk2_number, '\0'); // for sscanf            
-            uint64_t tmp;
-            sscanf(tsk2_number.data, "%"SCNu64, &tmp);
-            DARRAY_PUSH(tsk2_numbers, tmp);
+            // cleanup for the next iteration
+            tsk2_numbers.length = 0; 
+            for (size_t i = 0; i < tsk1_numbers.length; ++i) tsk1_numbers.data[i] = 0;
         }
-        free(tsk2_number.data);
     }
 
     printf("answer 1: %"PRIu64"\n", answer1);
@@ -121,10 +115,8 @@ int main(int argv, char* argc[])
     for (size_t i = 0; i < file_lines.length; ++i) {
         free(file_lines.data[i].data);
     }
+
     free(file_lines.data);
-    for (size_t i = 0; i < tsk1_numbers.length; ++i) {
-        free(tsk1_numbers.data[i].data);
-    }
     free(tsk1_numbers.data);
     free(tsk2_numbers.data);
 
