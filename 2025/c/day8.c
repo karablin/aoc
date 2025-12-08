@@ -26,19 +26,6 @@ DARRAY_DEFINE_TYPE(JunctionBoxArray, JunctionBox);
 DARRAY_DEFINE_TYPE(IdxPairs, IdxPair);
 DARRAY_DEFINE_TYPE(CircuiInfoArray, CircuiInfo);
 
-static bool contains_index_pair(IdxPairs *pairs, size_t a_idx, size_t b_idx) 
-{
-    for (size_t i = 0; i < pairs->length; ++i) {
-        bool found =
-            (pairs->data[i].a_idx == a_idx && pairs->data[i].b_idx == b_idx) ||
-            (pairs->data[i].a_idx == b_idx && pairs->data[i].b_idx == a_idx);
-        if (found) {
-            return true;
-        }
-    }
-    return false;
-}
-
 static bool read_point(JunctionBox *p, FILE *f) {
     int coord[3] = {0};
     size_t coord_idx = 0;
@@ -135,7 +122,13 @@ int main(int argv, char* argc[])
             for (size_t point_b_idx = point_a_idx+1; point_b_idx < boxes.length; ++point_b_idx) {
                 double distance = point_distance(boxes.data[point_a_idx], boxes.data[point_b_idx]);
                 if (distance < iter_min_dist) {
-                    if (!contains_index_pair(&pairs, point_a_idx, point_b_idx)) {
+                    // optimization: only answer1 requires to check that 2 boxes in circuit are connected before
+                    // for answer 2 we only need to know if box already in circuit or not
+                    bool t = (answer1 == 0) ?
+                        !contains_index_pair(&pairs, point_a_idx, point_b_idx) :
+                        boxes.data[point_a_idx].circuit_id != boxes.data[point_b_idx].circuit_id;
+
+                    if (t) {
                         iter_min_dist = distance;
                         min_distance_idx = point_b_idx;
                     }
