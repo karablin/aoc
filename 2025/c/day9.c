@@ -12,6 +12,7 @@ typedef struct {
     size_t x;
     size_t y;
 } Point2D;
+
 DARRAY_DEFINE_TYPE(Point2DArray, Point2D);
 
 static bool read_point2d(Point2D *p, FILE *f) {
@@ -39,13 +40,13 @@ static bool point_inside_poly(Point2DArray points, Point2D p)
     for (size_t i = 0; i < points.length; ++i) {
         Point2D p1 = points.data[i];
         Point2D p2 = points.data[i+1 == points.length ? 0 : i+1];
-        
+
         size_t x_left = MIN(p1.x, p2.x);
         size_t x_right = MAX(p1.x, p2.x);
         size_t y_top = MIN(p1.y, p2.y);
         size_t y_bottom = MAX(p1.y, p2.y);
         // point lays on line segment ?
-        bool point_on_line = 
+        bool point_on_line =
             (y_top == y_bottom && y_top == p.y && p.x >= x_left && p.x <= x_right) ||
             (x_left == x_right && x_left == p.x && p.y >= y_top && p.y <= y_bottom);
         if (point_on_line) {
@@ -92,7 +93,7 @@ int main(int argv, char* argc[])
             int dy = tiles.data[a_idx].y - tiles.data[b_idx].y;
             int64_t width = ABS(dx) + 1;
             int64_t height = ABS(dy) + 1;
-       
+
             int64_t square = width * height;
 
             if (square > max2_square) {
@@ -100,29 +101,42 @@ int main(int argv, char* argc[])
                     .x = MIN(tiles.data[a_idx].x, tiles.data[b_idx].x),
                     .y = MIN(tiles.data[a_idx].y, tiles.data[b_idx].y)
                 };
-                // for each point on perimeter of rectabgle, check if point inside of the shape
-                bool rect_inside = true;
-                for (size_t x = top_left.x; x < (top_left.x + width) && rect_inside; ++x) {
-                    if (!point_inside_poly(tiles, (Point2D){ .x = x, .y = top_left.y }) ||
-                        !point_inside_poly(tiles, (Point2D){ .x = x, .y = top_left.y + height - 1 })) 
-                    {
-                        rect_inside = false;
-                    }
+                Point2D bottom_right = {
+                    .x = MAX(tiles.data[a_idx].x, tiles.data[b_idx].x),
+                    .y = MAX(tiles.data[a_idx].y, tiles.data[b_idx].y)
+                };
 
-                }
-                for (size_t y = top_left.y; y < (top_left.y + height) && rect_inside; ++y) {
-                    if (!point_inside_poly(tiles, (Point2D){ .x = top_left.x, .y = y }) || 
-                        !point_inside_poly(tiles, (Point2D){ .x = top_left.x + width - 1, .y = y })) 
-                    {
-                        rect_inside = false;
+                // check corners first, this could speedup search
+                bool rect_inside =
+                    point_inside_poly(tiles, (Point2D){ .x = top_left.x, .y = top_left.y }) &&
+                    point_inside_poly(tiles, (Point2D){ .x = top_left.x, .y = bottom_right.y }) &&
+                    point_inside_poly(tiles, (Point2D){ .x = bottom_right.x, .y = bottom_right.y }) &&
+                    point_inside_poly(tiles, (Point2D){ .x = bottom_right.x, .y = top_left.y });
+
+                if (rect_inside) {
+                    // for each point on perimeter of rectabgle, check if point inside of the shape
+                    for (size_t x = top_left.x; x < (top_left.x + width) && rect_inside; ++x) {
+                        if (!point_inside_poly(tiles, (Point2D){ .x = x, .y = top_left.y }) ||
+                            !point_inside_poly(tiles, (Point2D){ .x = x, .y = top_left.y + height - 1 }))
+                        {
+                            rect_inside = false;
+                        }
+                    }
+                    for (size_t y = top_left.y; y < (top_left.y + height) && rect_inside; ++y) {
+                        if (!point_inside_poly(tiles, (Point2D){ .x = top_left.x, .y = y }) ||
+                            !point_inside_poly(tiles, (Point2D){ .x = top_left.x + width - 1, .y = y }))
+                        {
+                            rect_inside = false;
+                        }
                     }
                 }
+
                 if (rect_inside) {
-                    // printf("new max square %"PRIu64" - (%zu,%zu) - (%zu,%zu)\n", 
-                    //     square, 
-                    //     tiles.data[a_idx].x, tiles.data[a_idx].y,
-                    //     tiles.data[b_idx].x, tiles.data[b_idx].y
-                    // );
+                    printf("new max square %"PRIu64" - (%zu,%zu) - (%zu,%zu)\n",
+                        square,
+                        tiles.data[a_idx].x, tiles.data[a_idx].y,
+                        tiles.data[b_idx].x, tiles.data[b_idx].y
+                    );
                     pm1.x = tiles.data[a_idx].x;
                     pm1.y = tiles.data[a_idx].y;
                     pm2.x = tiles.data[b_idx].x;
