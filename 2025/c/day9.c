@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -44,16 +45,24 @@ static bool point_inside_poly(Point2DArray points, Point2D p)
         size_t x_right = MAX(p1.x, p2.x);
         size_t y_top = MIN(p1.y, p2.y);
         size_t y_bottom = MAX(p1.y, p2.y);
-        // point lays on line segment ?
-        bool point_on_line =
-            (y_top == y_bottom && y_top == p.y && p.x >= x_left && p.x <= x_right) ||
-            (x_left == x_right && x_left == p.x && p.y >= y_top && p.y <= y_bottom);
-        if (point_on_line) {
+        // point lays on horizontal line segment
+        if (y_top == y_bottom) {
+            if (y_top == p.y && p.x >= x_left && p.x <= x_right) {
+                return true;
+            }
+            continue;
+        }
+        // else vertical line segment
+        if (!(p.y > y_top && p.y <= y_bottom)) {
+            continue;
+        }
+        // point lays on vert line segment
+        if (x_left == p.x) {
             return true;
         }
         // count vertical line segments to the right.
         // ignoing top starting points, because in some cases they produce false positives
-        if (x_left == x_right && p.y > y_top && p.y <= y_bottom && p.x < x_left) {
+        if (p.x < x_left) {
             ++lines_on_right;
         }
     }
