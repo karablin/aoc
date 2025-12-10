@@ -53,6 +53,7 @@ static bool point_inside_poly(Point2DArray points, Point2D p)
             continue;
         }
         // else vertical line segment
+        // ignoing top starting points, because in some cases they produce false positives
         if (!(p.y > y_top && p.y <= y_bottom)) {
             continue;
         }
@@ -61,7 +62,6 @@ static bool point_inside_poly(Point2DArray points, Point2D p)
             return true;
         }
         // count vertical line segments to the right.
-        // ignoing top starting points, because in some cases they produce false positives
         if (p.x < x_left) {
             ++lines_on_right;
         }
