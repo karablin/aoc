@@ -40,6 +40,8 @@
         }\
     } while(0)
 
+#define DARRAY_BYTES(array) (((array).length)*sizeof((array).data[0]))
+
 /*
     read from file stream into the array, up to max_count-1,
     until EOF or compare_char found. compare_char is skipped 
