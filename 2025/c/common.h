@@ -40,7 +40,23 @@
         }\
     } while(0)
 
-#define DARRAY_BYTES(array) (((array).length)*sizeof((array).data[0]))
+#define DARRAY_BYTE_SIZE(array) (((array).length)*sizeof((array).data[0]))
+
+#define DARRAY_RESIZE(array, new_size)\
+    do {\
+        if ((new_size) > (array).capacity) {\
+            (array).data = realloc((array).data, (new_size) * sizeof((array).data[0]));\
+            (array).capacity = (new_size);\
+        }\
+        (array).length = (new_size);\
+    } while(0)
+
+#define DARRAY_NEW(a_type, a_var, size)\
+    a_type a_var;\
+    a_var.data = malloc((size) * sizeof(a_var.data[0]));\
+    a_var.length = (size);\
+    a_var.capacity = a_var.length;\
+    memset(a_var.data, 0, a_var.length * sizeof(a_var.data[0]));
 
 /*
     read from file stream into the array, up to max_count-1,
