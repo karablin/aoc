@@ -127,7 +127,7 @@ void task2_search(Task2State* s, size_t btn_idx, U16Array *current_joltages)
     }
 
     U8Array curr_btn = s->schema->byte_buttons.data[btn_idx];
-    int local_max_k = INT_MAX;
+    size_t local_max_k = INT_MAX;
     
     // try to reduce search by pruning unreachable paths, and dynamically adjusting limit for button
     for (size_t j = 0; j < s->schema->joltages.length; ++j) {
@@ -143,7 +143,7 @@ void task2_search(Task2State* s, size_t btn_idx, U16Array *current_joltages)
         }
         // also calculate local limit for current button (how much pushes left for it)
         if (curr_btn.data[j] > 0) {
-            local_max_k = MIN(jolt_diff, local_max_k); 
+            local_max_k = MIN(MAX(0, jolt_diff), local_max_k); 
         }
     }
 
@@ -263,7 +263,7 @@ int main(int argv, char* argc[]) {
         printf("=======================================================================\n");
         printf("#%zu\n", schema_idx);
         time_t t = time(NULL);
-        printf("%s", ctime(&t), schema_idx);
+        printf("%s", ctime(&t));
         printf("=======================================================================\n");
         
         print_schema(&schema);
