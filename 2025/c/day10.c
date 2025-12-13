@@ -113,11 +113,7 @@ void task2_search(Task2State* s, size_t btn_idx, U16Array *current_joltages)
             for (size_t i = 0; i < s->button_presses.length; ++i) {
                 printf(" %" PRIu16, s->button_presses.data[i]);
             }
-            printf(" (total: %zu), current joltages: ", btn_press_sum);
-            for (size_t i = 0; i < current_joltages->length; ++i) {
-                printf(" %" PRIu16, current_joltages->data[i]);
-            }
-            printf("\n");
+            printf(" (total: %zu)\n", btn_press_sum);
             if (s->btn_press_min > btn_press_sum) {
                 s->btn_press_min = btn_press_sum;
                 memcpy(s->btn_press_solution.data, s->button_presses.data, DARRAY_BYTE_SIZE(s->button_presses));
