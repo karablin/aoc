@@ -52,7 +52,7 @@ int main(int argv, char* argc[])
     uint64_t answer1 = 0;
     uint64_t answer2 = 0;
 
-    char current_operator;
+    char current_operator = 0;
 
     UInt64Array tsk1_numbers = {0};
     for (size_t line_idx = 0; line_idx < file_lines.length - 1; ++line_idx) {
