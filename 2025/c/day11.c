@@ -1,7 +1,6 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <string.h>
@@ -37,10 +36,10 @@ static void reset_unreachable_flag(WireGraph *graph);
 static void flag_unreachable_nodes(WireGraph *graph, size_t node);
 static size_t get_node_idx_by_name(WireGraph *graph, uint32_t node_name);
 static size_t store_node(WireGraph *graph, uint32_t node_name);
-static void print_node(WireGraph* graph, size_t idx);
+static void print_node(const WireGraph* graph, size_t idx);
 static bool parse_input(WireGraph *graph, FILE *f);
 static bool read_line(String *buf, FILE *f);
-static uint32_t parse3c (char c[]);
+static uint32_t parse3c (const char c[]);
 
 int main(int argv, char* argc[])
 {
@@ -76,7 +75,7 @@ int main(int argv, char* argc[])
 
     uint64_t answer2 = 1;
     for (size_t seq_idx = 0; seq_idx < ARRAY_LENGTH(sequences); ++seq_idx) {
-        // only one of sequences valid, graph is directional and w/o cycles (at least I didnt noticed cycles)
+        // only one of sequences valid, graph is directional and w/o cycles (at least I didn't notice cycles)
         if (is_sequence_possible(&graph, sequences[seq_idx], ARRAY_LENGTH(sequences[seq_idx]))) {
             printf("seq %zu is valid\n", seq_idx);
             for (size_t i = 0; i < ARRAY_LENGTH(sequences[seq_idx]) - 1; ++i) {
@@ -286,7 +285,7 @@ end:
 
 static bool read_line(String* buf, FILE* f) 
 {
-    for (char c = getc(f); c != EOF && c != '\n'; c = getc(f)) {
+    for (int c = getc(f); c != EOF && c != '\n'; c = getc(f)) {
         if (c == '\r') {
             continue;
         }
@@ -295,7 +294,7 @@ static bool read_line(String* buf, FILE* f)
     return buf->length > 0;
 }
 
-static uint32_t parse3c (char c[])
+static uint32_t parse3c (const char c[])
 {
     return c[2] | c[1] << 8 | c[0] << 16;
 }
@@ -304,7 +303,7 @@ static uint32_t parse3c (char c[])
 // pretty printing
 //
 
-static void print_node(WireGraph* graph, size_t idx) 
+static void print_node(const WireGraph* graph, size_t idx)
 {
     if (idx >= graph->names.length) {
         printf("print_node(): out of bounds at %zu\n", idx);
