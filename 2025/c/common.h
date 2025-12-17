@@ -25,7 +25,8 @@
             } else {\
                 (array).capacity = 64;\
             }\
-            (array).data = realloc((array).data, (array).capacity*sizeof((array).data[0]));\
+            void *new_mem = realloc((array).data, (array).capacity*sizeof((array).data[0]));\
+            if (new_mem) (array).data = new_mem;\
         }\
         (array).data[(array).length++] = value;\
     } while(0)
@@ -45,7 +46,8 @@
 #define DARRAY_RESIZE(array, new_size)\
     do {\
         if ((new_size) > (array).capacity) {\
-            (array).data = realloc((array).data, (new_size) * sizeof((array).data[0]));\
+            void *new_mem = realloc((array).data, (new_size) * sizeof((array).data[0]));\
+            if (new_mem) (array).data = new_mem;\
             (array).capacity = (new_size);\
         }\
         (array).length = (new_size);\
