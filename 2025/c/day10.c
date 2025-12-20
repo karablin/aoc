@@ -77,7 +77,11 @@ static size_t task_1(SchemaConfig schema)
     return min_buttons;
 }
 
-// task 2 entry point. setup and run recursion
+// TASK 2
+// solve linear equations:
+// use Gauss-Jordan elimination,
+// and then iterate over free variables, if any, to (probably) get solutions
+// if there is no free variables - only one solution exists
 static size_t task_2(SchemaConfig *schema) {
     size_t btn_press_min = SIZE_MAX;
     Matrix m = gauss_jordan(schema);
@@ -111,11 +115,12 @@ static size_t task_2(SchemaConfig *schema) {
     DARRAY_NEW(U16Array, button_counts, schema->byte_buttons.length);
 
     if (free_var_cnt == 0) {
+        // only one solution
         I16Array no_free_vars = {0};
         btn_press_min = get_btn_press_count(&m, &button_counts, &no_free_vars);
     } else {
         DARRAY_NEW(I16Array, current_free_vars, free_var_cnt);
-
+        // iterate over all possible combinations of free variables
         while (true) {
             size_t btn_press_cnt = get_btn_press_count(&m, &button_counts, &current_free_vars);
             if (btn_press_cnt > 0) {
