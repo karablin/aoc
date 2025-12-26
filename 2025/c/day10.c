@@ -376,30 +376,22 @@ static void mat_mul_row(const Matrix *m, size_t row, int k)
 
 static int gcd(int a, int b)
 {
-    a = abs(a);
-    b = abs(b);
     while (b != 0) {
-        const int temp = b;
-        b = a % b;
-        a = temp;
+        const int rem = a % b;
+        a = b;
+        b = rem;
     }
-    return a;
+    return abs(a);
 }
 
-static int array_gcd(const I16Array *a)
+int array_gcd(const I16Array *a)
 {
-    size_t i = 0;
-    while (i < a->length && a->data[i] == 0) ++i;
-    if (i == a->length) return 1;
+    if (a->length == 0) return 0;
 
-    int result = abs(a->data[i]);
-    ++i;
-
-    for (; i < a->length; ++i) {
-        if (a->data[i] != 0) {
-            result = gcd(result, a->data[i]);
-            if (result == 1) break;
-        }
+    int result = abs(a->data[0]);
+    for (size_t i = 1; i < a->length; ++i) {
+        result = gcd(result, a->data[i]);
+        if (result == 1) break;
     }
     return result;
 }
