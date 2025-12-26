@@ -7,13 +7,15 @@
 #include <string.h>
 
 #include "common.h"
+#define MATRIX_ELEM_TYPE int16_t
+#define MATRIX_H_IMPL
+#include "matrix.h"
 
 DARRAY_DEFINE_TYPE(U16Array, uint16_t)
 DARRAY_DEFINE_TYPE(U8Array, uint8_t)
 DARRAY_DEFINE_TYPE(U8ArrayArray, U8Array)
 DARRAY_DEFINE_TYPE(String, char)
 DARRAY_DEFINE_TYPE(I16Array, int16_t)
-DARRAY_DEFINE_TYPE(Matrix, I16Array)
 
 // lights and buttons encoded in bits
 // lights is set of bits, one bit per light
@@ -30,16 +32,12 @@ DARRAY_DEFINE_TYPE(SchemaConfigArray, SchemaConfig)
 static bool read_schema_line(SchemaConfig* schema, FILE* f);
 static void print_schema(const SchemaConfig *schema);
 static size_t get_btn_press_count(const Matrix *m, const U16Array *button_counts, const I16Array *current_free_vars);
-static Matrix gauss_jordan(SchemaConfig *schema);
+static Matrix* gauss_jordan(SchemaConfig *schema);
 static void print_matrix(const Matrix *m);
-static int16_t mat_get(const Matrix *m, size_t row, size_t col);
 static bool is_basic_variable(const Matrix *m, size_t col);
-static void mat_sub_row(const Matrix *m, size_t target, size_t source, int k);
-static void mat_mul_row(const Matrix *m, size_t row, int k);
-static void mat_div_row(const Matrix *m, size_t row, int k);
 static void mat_cleanup(Matrix *m);
-static int gcd(int a, int b);
-static int array_gcd(const I16Array *a);
+static int16_t gcd(int16_t a, int16_t b);
+static int16_t mat_row_gcd(const Matrix *m, size_t row);
 
 // TASK 1
 // ok, bits everywhere :)
@@ -84,16 +82,27 @@ static size_t task_1(SchemaConfig schema)
 // if there is no free variables - only one solution exists
 static size_t task_2(SchemaConfig *schema) {
     size_t btn_press_min = SIZE_MAX;
-    Matrix m = gauss_jordan(schema);
+    Matrix *m = gauss_jordan(schema);
     U16Array global_constraints = {0};
 
-    // how much free variables in resulting matrix
-    // columns count - rows count - rightmost column
-    size_t free_var_cnt = m.data[0].length - m.length - 1;
+    // after Gauss-Jordan elimination, linear equation matrix looks like this:
+    // ┌──┬──┬──┬──┬────────────── basic variables
+    // v  v  v  v  v  v──v──────── free variables
+    //                        v─── constant term
+    // 1  0  0  0  0 -1 -1 | -15
+    // 0  1  0  0  0  1  1 | 17
+    // 0  0  1  0  0  0 -1 | 13
+    // 0  0  0  1  0  0  2 | 14
+    // 0  0  0  0 -1  0  1 | -171
+    //
+    // basic variables can be found by iterating over free variable values
+
+    // how many free variables in resulting matrix
+    size_t free_var_cnt = m->cols - m->rows - 1;
     printf("free var count: %zu\n", free_var_cnt);
 
     // setup global constraints, only for free variables
-    for (size_t i = m.length; i < schema->byte_buttons.length; ++i) {
+    for (size_t i = m->rows; i < schema->byte_buttons.length; ++i) {
         uint16_t constraint = UINT16_MAX;
         U8Array button = schema->byte_buttons.data[i];
         for (size_t joltage_idx = 0; joltage_idx < button.length; ++joltage_idx) {
@@ -117,12 +126,12 @@ static size_t task_2(SchemaConfig *schema) {
     if (free_var_cnt == 0) {
         // only one solution
         I16Array no_free_vars = {0};
-        btn_press_min = get_btn_press_count(&m, &button_counts, &no_free_vars);
+        btn_press_min = get_btn_press_count(m, &button_counts, &no_free_vars);
     } else {
         DARRAY_NEW(I16Array, current_free_vars, free_var_cnt);
         // iterate over all possible combinations of free variables
         while (true) {
-            size_t btn_press_cnt = get_btn_press_count(&m, &button_counts, &current_free_vars);
+            size_t btn_press_cnt = get_btn_press_count(m, &button_counts, &current_free_vars);
             if (btn_press_cnt > 0) {
                 btn_press_min = MIN(btn_press_cnt, btn_press_min);
             }
@@ -146,10 +155,7 @@ static size_t task_2(SchemaConfig *schema) {
         free(current_free_vars.data);
     }
     // free memory
-    for (size_t row_idx = 0; row_idx < m.length; ++row_idx) {
-        free(m.data[row_idx].data);
-    }
-    free(m.data);
+    mat_free(m);
     free(global_constraints.data);
     free(button_counts.data);
     return btn_press_min;
@@ -159,11 +165,11 @@ static size_t task_2(SchemaConfig *schema) {
 static size_t get_btn_press_count(const Matrix *m, const U16Array *button_counts, const I16Array *current_free_vars)
 {
     size_t btn_press_cnt = 0;
-    size_t free_var_start = m->length;
-    size_t last_column = m->data[0].length - 1;
+    size_t free_var_start = m->rows;
+    size_t last_column = m->cols - 1;
 
     bool have_solution = true;
-    for (size_t row_idx = 0; row_idx < m->length; ++row_idx) {
+    for (size_t row_idx = 0; row_idx < m->rows; ++row_idx) {
         int16_t k_x = mat_get(m, row_idx, row_idx);
         int16_t answer = mat_get(m, row_idx, last_column);
         for (size_t fv_idx = 0; fv_idx < current_free_vars->length; ++fv_idx) {
@@ -201,79 +207,70 @@ static size_t get_btn_press_count(const Matrix *m, const U16Array *button_counts
 }
 
 // Gauss-Jordan elimination
-static Matrix gauss_jordan(SchemaConfig *schema)
+static Matrix* gauss_jordan(SchemaConfig *schema)
 {
     const size_t columns_cnt = schema->byte_buttons.length + 1;
 
     // make matrix and fill it with initial values
-    Matrix m = {0};
-    for (size_t row_idx = 0; row_idx < schema->joltages.length; ++row_idx) {
-        I16Array row = {0};
-        DARRAY_RESIZE(row, columns_cnt);
-        for (size_t col_idx = 0; col_idx < columns_cnt - 1; ++col_idx) {
-            row.data[col_idx] = schema->byte_buttons.data[col_idx].data[row_idx];
+    Matrix *m = mat_new(schema->joltages.length, columns_cnt);
+    for (size_t r = 0; r < schema->joltages.length; ++r) {
+        for (size_t c = 0; c < columns_cnt - 1; ++c) {
+            mat_set(m, r, c, schema->byte_buttons.data[c].data[r]);
         }
-        row.data[columns_cnt - 1] = (int16_t)schema->joltages.data[row_idx];
-        DARRAY_PUSH(m, row);
+        mat_set(m, r, columns_cnt - 1, (int16_t)schema->joltages.data[r]);
     }
 
     puts("original:");
-    print_matrix(&m);
+    print_matrix(m);
 
-    for (size_t start_row_idx = 0; start_row_idx < m.length; ++start_row_idx) {
-        size_t col = MIN(start_row_idx, m.data[start_row_idx].length - 1);
+    for (size_t start_row_idx = 0; start_row_idx < m->rows; ++start_row_idx) {
+        size_t col = MIN(start_row_idx, m->cols - 1);
         // check for zero on main diagonal
-        if (mat_get(&m, start_row_idx, col) == 0) {
+        if (mat_get(m, start_row_idx, col) == 0) {
             // find one from below
             bool fixed = false;
-            for (size_t row_idx = start_row_idx; row_idx < m.length; ++row_idx) {
-                if (mat_get(&m, row_idx, col) != 0) {
+            for (size_t row_idx = start_row_idx; row_idx < m->rows; ++row_idx) {
+                if (mat_get(m, row_idx, col) != 0) {
                     // swap rows
-                    int16_t *tmp = m.data[start_row_idx].data;
-                    m.data[start_row_idx].data =m.data[row_idx].data;
-                    m.data[row_idx].data =tmp;
+                    mat_swap_rows(m, start_row_idx, row_idx);
                     fixed = true;
                     break;
                 }
             }
             if (!fixed) {
                 // on this column all zeroes below,  pick next non-zero column
-                while (mat_get(&m, start_row_idx, col) == 0 && col < m.data[start_row_idx].length) ++col;
+                while (mat_get(m, start_row_idx, col) == 0 && col < m->cols) ++col;
             }
         }
         // elimination
-        for (size_t row_idx = 0; row_idx < m.length; ++row_idx) {
+        for (size_t row_idx = 0; row_idx < m->rows; ++row_idx) {
             if (row_idx == start_row_idx) {
                 continue;
             }
-            int16_t v1 = mat_get(&m, row_idx, col);
+            int16_t v1 = mat_get(m, row_idx, col);
             if (v1 != 0) {
-                int16_t v0 = mat_get(&m, start_row_idx, col);
+                int16_t v0 = mat_get(m, start_row_idx, col);
                 if (abs(v1) != abs(v0)) {
-                    int lcm = abs(v0 * v1) / gcd(v0, v1);
-                    mat_mul_row(&m, row_idx, lcm);
+                    int16_t lcm = abs(v0 * v1) / gcd(v0, v1);
+                    mat_mul_row(m, row_idx, lcm);
                 }
-                int k = mat_get(&m, row_idx, col) / v0;
-                mat_sub_row(&m, row_idx, start_row_idx, k);
+                int16_t k = mat_get(m, row_idx, col) / v0;
+                mat_sub_rows_with_k(m, row_idx, start_row_idx, k);
             }
         }
-        mat_cleanup(&m);
+        mat_cleanup(m);
     }
     // fix column order
-    for (size_t row_idx = 0; row_idx < m.length; ++row_idx) {
+    for (size_t row_idx = 0; row_idx < m->rows; ++row_idx) {
         size_t current_col = row_idx;
-        if (is_basic_variable(&m, current_col)) {
+        if (is_basic_variable(m, current_col)) {
             continue;
         }
         bool found_repl = false;
-        for (size_t col_idx = current_col + 1; col_idx < m.data[row_idx].length; ++col_idx) {
-            if (mat_get(&m, row_idx, col_idx) != 0 && is_basic_variable(&m, col_idx)) {
+        for (size_t col_idx = current_col + 1; col_idx < m->cols; ++col_idx) {
+            if (mat_get(m, row_idx, col_idx) != 0 && is_basic_variable(m, col_idx)) {
                 // swap columns
-                for (size_t r = 0; r < m.length; ++r) {
-                    int16_t tmp = m.data[r].data[current_col];
-                    m.data[r].data[current_col] = m.data[r].data[col_idx];
-                    m.data[r].data[col_idx] = tmp;
-                }
+                mat_swap_columns(m, current_col, col_idx);
                 // and also swap buttons
                 U8Array tmp = schema->byte_buttons.data[current_col];
                 schema->byte_buttons.data[current_col] = schema->byte_buttons.data[col_idx];
@@ -289,7 +286,7 @@ static Matrix gauss_jordan(SchemaConfig *schema)
         }
     }
     printf("final:\n");
-    print_matrix(&m);
+    print_matrix(m);
 
     return m;
 }
@@ -347,50 +344,23 @@ int main(int argv, char* argc[]) {
     return 0;
 }
 
-
-static int16_t mat_get(const Matrix *m, size_t row, size_t col)
-{
-    return m->data[row].data[col];
-}
-
-static void mat_sub_row(const Matrix *m, size_t target, size_t source, int k)
-{
-    for (size_t col_idx = 0; col_idx < m->data[target].length; ++col_idx) {
-        m->data[target].data[col_idx] -= k * m->data[source].data[col_idx];
-    }
-}
-
-static void mat_div_row(const Matrix *m, size_t row, int k)
-{
-    for (size_t col_idx = 0; col_idx < m->data[row].length; ++col_idx) {
-        m->data[row].data[col_idx] /= k;
-    }
-}
-
-static void mat_mul_row(const Matrix *m, size_t row, int k)
-{
-    for (size_t col_idx = 0; col_idx < m->data[row].length; ++col_idx) {
-        m->data[row].data[col_idx] *= k;
-    }
-}
-
-static int gcd(int a, int b)
+static int16_t gcd(int16_t a, int16_t b)
 {
     while (b != 0) {
-        const int rem = a % b;
+        const int16_t rem = a % b;
         a = b;
         b = rem;
     }
-    return abs(a);
+    return ABS(a);
 }
 
-int array_gcd(const I16Array *a)
+int16_t mat_row_gcd(const Matrix* m, const size_t row)
 {
-    if (a->length == 0) return 0;
+    if (m->cols == 0) return 0;
 
-    int result = abs(a->data[0]);
-    for (size_t i = 1; i < a->length; ++i) {
-        result = gcd(result, a->data[i]);
+    int16_t result = abs(mat_get(m, row, 0));
+    for (size_t i = 1; i < m->cols; ++i) {
+        result = gcd(result, mat_get(m, row, i));
         if (result == 1) break;
     }
     return result;
@@ -399,32 +369,30 @@ int array_gcd(const I16Array *a)
 static void mat_cleanup(Matrix *m)
 {
     // remove zero rows
-    for (int row_idx = (int)m->length - 1; row_idx >= 0; --row_idx) {
+    for (int row_idx = (int)m->rows - 1; row_idx >= 0; --row_idx) {
         bool zero_row = true;
-        for (size_t col_idx = 0; col_idx < m->data[row_idx].length; ++col_idx) {
+        for (size_t col_idx = 0; col_idx < m->cols; ++col_idx) {
             if (mat_get(m, row_idx, col_idx)) {
                 zero_row = false;
                 break;
             }
         }
         if (zero_row) {
-            free(m->data[row_idx].data);
-            DARRAY_REMOVE(*m, (size_t)row_idx);
+            mat_remove_row(m, row_idx);
         }
     }
     // divide rows by gcd
-    for (size_t row_idx = 0; row_idx < m->length; ++row_idx) {
-        int row_gcd = array_gcd(&m->data[row_idx]);
+    for (size_t row_idx = 0; row_idx < m->rows; ++row_idx) {
+        int16_t row_gcd = mat_row_gcd(m, row_idx);
         if (row_gcd > 1) {
             mat_div_row(m, row_idx, row_gcd);
         }
     }
     // remove duplicates.
-    for (size_t row1_idx = 0; row1_idx < m->length - 1; ++row1_idx) {
-        for (size_t row2_idx = m->length - 1; row2_idx > row1_idx; --row2_idx) {
-            if (memcmp(m->data[row1_idx].data, m->data[row2_idx].data, DARRAY_BYTE_SIZE(m->data[row2_idx])) == 0) {
-                free(m->data[row2_idx].data);
-                DARRAY_REMOVE(*m, row2_idx);
+    for (size_t row1_idx = 0; row1_idx < m->rows - 1; ++row1_idx) {
+        for (size_t row2_idx = m->rows - 1; row2_idx > row1_idx; --row2_idx) {
+            if (memcmp(&m->data[row1_idx * m->cols], &m->data[row2_idx * m->cols], m->cols * sizeof(m->data[0])) == 0) {
+                mat_remove_row(m, row2_idx);
             }
         }
     }
@@ -433,8 +401,8 @@ static void mat_cleanup(Matrix *m)
 static bool is_basic_variable(const Matrix *m, size_t col)
 {
     size_t non_z_cnt = 0;
-    for (size_t row_idx = 0; row_idx < m->length; ++row_idx) {
-        if (m->data[row_idx].data[col] != 0) {
+    for (size_t row_idx = 0; row_idx < m->rows; ++row_idx) {
+        if (mat_get(m, row_idx, col) != 0) {
             ++non_z_cnt;
         }
     }
@@ -444,13 +412,13 @@ static bool is_basic_variable(const Matrix *m, size_t col)
 static void print_matrix(const Matrix *m)
 {
     puts("-------------------------------");
-    for (size_t row_idx = 0; row_idx < m->length; ++row_idx) {
-        for (size_t col_idx = 0; col_idx < m->data[row_idx].length - 1; ++col_idx) {
-            printf("%2"PRIi16" ", m->data[row_idx].data[col_idx]);
+    for (size_t row_idx = 0; row_idx < m->rows; ++row_idx) {
+        for (size_t col_idx = 0; col_idx < m->cols - 1; ++col_idx) {
+            printf("%2"PRIi16" ", mat_get(m, row_idx, col_idx));
         }
-        printf("| %"PRIi16"\n", m->data[row_idx].data[m->data[row_idx].length - 1]);
+        printf("| %"PRIi16"\n", mat_get(m, row_idx, m->cols - 1));
     }
-    printf("%zu rows\n", m->length);
+    printf("%zu rows\n", m->rows);
 }
 
 
