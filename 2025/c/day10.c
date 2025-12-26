@@ -396,11 +396,10 @@ int array_gcd(const I16Array *a)
     return result;
 }
 
-static bool cleanup_once(Matrix *m)
+static void mat_cleanup(Matrix *m)
 {
-    // TODO: this is not optimal, need to rewrite
     // remove zero rows
-    for (size_t row_idx = 0; row_idx < m->length; ++row_idx) {
+    for (int row_idx = (int)m->length - 1; row_idx >= 0; --row_idx) {
         bool zero_row = true;
         for (size_t col_idx = 0; col_idx < m->data[row_idx].length; ++col_idx) {
             if (mat_get(m, row_idx, col_idx)) {
@@ -410,31 +409,23 @@ static bool cleanup_once(Matrix *m)
         }
         if (zero_row) {
             free(m->data[row_idx].data);
-            DARRAY_REMOVE(*m, row_idx);
-            return true;
+            DARRAY_REMOVE(*m, (size_t)row_idx);
         }
     }
-    // remove duplicates
-    for (size_t row1_idx = 0; row1_idx < m->length - 1; ++row1_idx) {
-        for (size_t row2_idx = row1_idx + 1; row2_idx < m->length; ++row2_idx) {
-            if (memcmp(m->data[row1_idx].data, m->data[row2_idx].data, DARRAY_BYTE_SIZE(m->data[row2_idx])) == 0) {
-                free(m->data[row2_idx].data);
-                DARRAY_REMOVE(*m, row2_idx);
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-static void mat_cleanup(Matrix *m)
-{
-    while (cleanup_once(m)) {}
-    // reduce rows by gcd
+    // divide rows by gcd
     for (size_t row_idx = 0; row_idx < m->length; ++row_idx) {
         int row_gcd = array_gcd(&m->data[row_idx]);
         if (row_gcd > 1) {
             mat_div_row(m, row_idx, row_gcd);
+        }
+    }
+    // remove duplicates.
+    for (size_t row1_idx = 0; row1_idx < m->length - 1; ++row1_idx) {
+        for (size_t row2_idx = m->length - 1; row2_idx > row1_idx; --row2_idx) {
+            if (memcmp(m->data[row1_idx].data, m->data[row2_idx].data, DARRAY_BYTE_SIZE(m->data[row2_idx])) == 0) {
+                free(m->data[row2_idx].data);
+                DARRAY_REMOVE(*m, row2_idx);
+            }
         }
     }
 }
